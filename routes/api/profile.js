@@ -39,7 +39,7 @@ const upload = multer({
     s3: s3,
     bucket: s3BucketName,
     key: function(req, file, cb) {
-      console.log(file);
+      console.log("The file is : " + file);
       cb(null, file.originalname); //use Date.now() for unique file keys
     }
   })
@@ -220,28 +220,40 @@ router.get("/files/:file_id", auth, async (req, res) => {
     const profile = await Profile.findOne({ user: req.user.id });
     console.log("Calling profile file: " + profile);
     console.log("Calling req obj file: " + JSON.stringify(req.params));
-    const file = path.join(
-      __dirname,
-      "/../../",
-      profile.files
-        .filter(item => item._id == req.params.file_id)
-        .map(item => item.path)
-        .toString()
+
+    // console.log("Calling profile path: " + file);
+
+    const something = profile.files.filter(
+      item => item._id == req.params.file_id
     );
 
-    console.log("Calling profile path: " + file);
+    console.log("Calling profile something: " + something);
 
+    const key = profile.files
+      .filter(item => item._id == req.params.file_id)
+      .map(item => item.key)
+      .toString();
     const fileName = profile.files
       .filter(item => item._id == req.params.file_id)
       .map(item => item.originalname)
       .toString();
-    const mimetype = mime.lookup(file);
+
+    const mimetype = profile.files
+      .filter(item => item._id == req.params.file_id)
+      .map(item => item.mimetype)
+      .toString();
+
+    console.log("Calling profile key: " + key);
+    let params = { Bucket: s3BucketName, Key: key };
+    let filestream = s3.getObject(params).createReadStream();
+
+    // const mimetype = mime.lookup(file);
 
     res.setHeader("Content-disposition", "attachment");
     res.setHeader("filename", fileName);
     res.setHeader("Content-type", mimetype);
 
-    const filestream = fs.createReadStream(file);
+    // const filestream = fs.createReadStream(file);
     filestream.pipe(res);
   } catch (err) {
     console.error(err.message);
