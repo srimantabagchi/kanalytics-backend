@@ -19,19 +19,19 @@ const ProfileSchema = new mongoose.Schema({
         type: String,
         required: true
       },
-      destination: {
-        type: String,
-        required: true
-      },
-      filename: {
-        type: String,
-        required: true
-      },
-      path: {
-        type: String,
-        required: true
-      },
       size: {
+        type: String,
+        required: true
+      },
+      bucket: {
+        type: String,
+        required: true
+      },
+      key: {
+        type: String,
+        required: true
+      },
+      location: {
         type: String,
         required: true
       },

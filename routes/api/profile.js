@@ -1,6 +1,8 @@
 const express = require("express");
+const AWS = require("aws-sdk");
 const router = express.Router();
 const multer = require("multer");
+const multerS3 = require("multer-s3");
 const path = require("path");
 const mime = require("mime");
 const fs = require("fs");
@@ -11,7 +13,37 @@ const { check, validationResult } = require("express-validator");
 const Profile = require("../../models/Profile");
 const User = require("../../models/User");
 
-var upload = multer({ dest: "uploads/" });
+const credentials = new AWS.SharedIniFileCredentials({ profile: "saml" });
+
+AWS.config.credentials = credentials;
+
+AWS.config.getCredentials(function(err) {
+  if (err) console.log(err.stack);
+  // credentials not loaded
+  else {
+    console.log("Access key:", AWS.config.credentials.accessKeyId);
+    console.log("Secret access key:", AWS.config.credentials.secretAccessKey);
+  }
+});
+
+AWS.config.update({
+  region: "us-east-1"
+});
+
+const s3 = new AWS.S3();
+
+const s3BucketName = "test-bucket-srimanta";
+
+const upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: s3BucketName,
+    key: function(req, file, cb) {
+      console.log(file);
+      cb(null, file.originalname); //use Date.now() for unique file keys
+    }
+  })
+});
 
 // @route    GET api/profile/me
 // @desc     Get current users profile
@@ -101,20 +133,20 @@ router.post("/files", [auth, upload.single("file")], async (req, res) => {
     originalname,
     encoding,
     mimetype,
-    destination,
-    filename,
-    path,
-    size
+    size,
+    bucket,
+    key,
+    location
   } = req.file;
 
   const newFile = {
     originalname,
     encoding,
     mimetype,
-    destination,
-    filename,
-    path,
-    size
+    size,
+    bucket,
+    key,
+    location
   };
 
   console.log("The req object is : " + JSON.stringify(req.body));
@@ -158,6 +190,15 @@ router.delete("/files/:file_id", auth, async (req, res) => {
     const removeIndex = profile.files
       .map(item => item.id)
       .indexOf(req.params.file_id);
+
+    console.log("key is : " + profile.files[removeIndex].key);
+
+    await s3
+      .deleteObject({
+        Bucket: s3BucketName,
+        Key: profile.files[removeIndex].key
+      })
+      .promise();
 
     profile.files.splice(removeIndex, 1);
 
