@@ -39,7 +39,7 @@ const upload = multer({
     s3: s3,
     bucket: s3BucketName,
     key: function(req, file, cb) {
-      console.log("The file is : " + file);
+      console.log("The file is : " + JSON.stringify(file));
       cb(null, file.originalname); //use Date.now() for unique file keys
     }
   })
